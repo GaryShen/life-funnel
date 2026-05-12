@@ -14,21 +14,42 @@ const HG = {
   glassBot: 950,
 };
 
+// Half-width of the glass cavity at vertical position y. The walls are
+// no longer straight — they curve outward like a bulb. Using a power
+// easing keeps this analytically invertible-free (no per-pixel solves)
+// while giving a pleasingly rounded "shoulder" near the chamber rim.
 function hgXAtY(y) {
   const { glassTop, glassBot, neckY, frameInset, neckHalf, W } = HG;
   const halfMax = W / 2 - frameInset;
+  // exponent < 1 → chamber opens FAST out of the neck, then plateaus.
+  // Gives bulb-like roundness rather than a sharp cone.
+  const BULB = 0.55;
   if (y <= neckY) {
-    const t = (y - glassTop) / (neckY - glassTop);
-    return halfMax * (1 - t) + neckHalf * t;
+    const t = (neckY - y) / (neckY - glassTop);       // 0 at neck, 1 at rim
+    return neckHalf + (halfMax - neckHalf) * Math.pow(t, BULB);
   } else {
-    const t = (y - neckY) / (glassBot - neckY);
-    return neckHalf * (1 - t) + halfMax * t;
+    const t = (y - neckY) / (glassBot - neckY);       // 0 at neck, 1 at rim
+    return neckHalf + (halfMax - neckHalf) * Math.pow(t, BULB);
   }
+}
+
+// Build an SVG polyline that traces the left or right wall between two
+// y values. Used by both the cavity-clip path (so sand can never escape)
+// and the sand-pile silhouettes (so the pile hugs the curved wall).
+function wallTrace(ySegments, side /* -1 left, +1 right */, samples = 18) {
+  const cx = HG.W / 2;
+  let out = "";
+  for (let i = 1; i <= samples; i++) {
+    const t = i / samples;
+    const y = ySegments[0] + (ySegments[1] - ySegments[0]) * t;
+    out += ` L ${cx + side * hgXAtY(y)} ${y}`;
+  }
+  return out;
 }
 
 // Build the SVG path string for the TOP sand pile.
 // Sand fills the top chamber up to a surface line. Surface is flat from
-// each wall in to a central concave dip.
+// each wall in to a central concave dip. Walls follow the curved glass.
 function topPilePath(passed) {
   const remaining = Math.max(0, Math.min(1, 1 - passed));
   if (remaining <= 0.001) return "";
@@ -39,18 +60,15 @@ function topPilePath(passed) {
   const dipHalfW = Math.max(30, halfAtLine * 0.5);
   const dipDepth = Math.min(26, (HG.neckY - sandLineY) * 0.22 + 6);
 
-  const left  = cx - halfAtLine;
-  const right = cx + halfAtLine;
   const dipL  = cx - dipHalfW;
   const dipR  = cx + dipHalfW;
 
   return [
     `M ${cx - HG.neckHalf} ${HG.neckY}`,
-    `L ${left} ${sandLineY}`,
+    wallTrace([HG.neckY, sandLineY], -1),    // up the curved left wall
     `L ${dipL} ${sandLineY}`,
     `Q ${cx} ${sandLineY + dipDepth} ${dipR} ${sandLineY}`,
-    `L ${right} ${sandLineY}`,
-    `L ${cx + HG.neckHalf} ${HG.neckY}`,
+    wallTrace([sandLineY, HG.neckY], +1),    // down the curved right wall
     `Z`,
   ].join(" ");
 }
@@ -68,14 +86,14 @@ function botPilePath(passed) {
   const peakY = Math.max(HG.neckY + 24, sandLineY - peakLift);
   const cx = HG.W / 2;
 
-  // outline: floor → up left wall to sandLineY → mound left base → peak curve → mound right base → down right wall → floor
+  // outline: floor → up curved left wall → mound base → peak curve → mound base → down curved right wall → floor
   return [
     `M ${cx - hgXAtY(HG.glassBot)} ${HG.glassBot}`,
-    `L ${cx - halfAtLine} ${sandLineY}`,
+    wallTrace([HG.glassBot, sandLineY], -1),
     `L ${cx - moundHalf} ${sandLineY}`,
     `Q ${cx} ${peakY} ${cx + moundHalf} ${sandLineY}`,
     `L ${cx + halfAtLine} ${sandLineY}`,
-    `L ${cx + hgXAtY(HG.glassBot)} ${HG.glassBot}`,
+    wallTrace([sandLineY, HG.glassBot], +1),
     `Z`,
   ].join(" ");
 }
@@ -253,37 +271,71 @@ function Hourglass({ passedRatio, sandDensity, grainSize, speedFactor, demoSpeed
   const topPath = topPilePath(passedRatio);
   const botPath = botPilePath(passedRatio);
 
+  // Closed silhouette of the glass cavity, traced along the curved walls.
+  // Used as both the clipping mask and the visible outline stroke.
+  const cx = HG.W / 2;
+  const cavityPath = [
+    `M ${cx - hgXAtY(HG.glassTop)} ${HG.glassTop}`,
+    wallTrace([HG.glassTop, HG.neckY], -1),
+    wallTrace([HG.neckY, HG.glassBot], -1),
+    `L ${cx + hgXAtY(HG.glassBot)} ${HG.glassBot}`,
+    wallTrace([HG.glassBot, HG.neckY], +1),
+    wallTrace([HG.neckY, HG.glassTop], +1),
+    `Z`,
+  ].join(" ");
+
+  // Bulb-center coordinates for radial highlights (top & bottom chamber centroids)
+  const topBulbY = HG.glassTop + (HG.neckY - HG.glassTop) * 0.45;
+  const botBulbY = HG.glassBot - (HG.glassBot - HG.neckY) * 0.45;
+
   return (
     <div className="hourglass-frame">
       <svg className="silhouette" viewBox={`0 0 ${HG.W} ${HG.H}`} preserveAspectRatio="xMidYMid meet" style={{ zIndex: 2 }}>
         <defs>
-          <linearGradient id="wood-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor={woodColor}/>
-            <stop offset="0.5" stopColor={woodColor} stopOpacity="0.82"/>
-            <stop offset="1" stopColor={woodColor}/>
+          {/* Wood: vertical grain + side darkening for cylinder feel */}
+          <linearGradient id="wood-grad" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0"    stopColor="#000" stopOpacity="0.45"/>
+            <stop offset="0.12" stopColor={woodColor}/>
+            <stop offset="0.5"  stopColor={woodColor}/>
+            <stop offset="0.88" stopColor={woodColor}/>
+            <stop offset="1"    stopColor="#000" stopOpacity="0.5"/>
           </linearGradient>
-          <linearGradient id="brass-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor={brassColor}/>
-            <stop offset="0.5" stopColor="#e3b873"/>
-            <stop offset="1" stopColor={brassColor}/>
+          <linearGradient id="wood-shade" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.18"/>
+            <stop offset="0.5" stopColor="#ffffff" stopOpacity="0"/>
+            <stop offset="1" stopColor="#000" stopOpacity="0.35"/>
           </linearGradient>
-          <linearGradient id="glass-shine" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0"    stopColor="#ffffff" stopOpacity="0.05"/>
-            <stop offset="0.25" stopColor="#ffffff" stopOpacity="0.22"/>
-            <stop offset="0.5"  stopColor="#ffffff" stopOpacity="0.0"/>
-            <stop offset="0.75" stopColor="#ffffff" stopOpacity="0.12"/>
-            <stop offset="1"    stopColor="#ffffff" stopOpacity="0.0"/>
+          {/* Brass: cylindrical specular sweep */}
+          <linearGradient id="brass-grad" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0"    stopColor="#000" stopOpacity="0.4"/>
+            <stop offset="0.15" stopColor={brassColor}/>
+            <stop offset="0.5"  stopColor="#f4d999"/>
+            <stop offset="0.85" stopColor={brassColor}/>
+            <stop offset="1"    stopColor="#000" stopOpacity="0.45"/>
           </linearGradient>
-          <linearGradient id="sand-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor={sandHl}/>
-            <stop offset="0.18" stopColor={sandColor}/>
-            <stop offset="1" stopColor={sandColor}/>
-          </linearGradient>
-          <linearGradient id="sand-grad-bot" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor={sandHl}/>
-            <stop offset="0.25" stopColor={sandColor}/>
-            <stop offset="1" stopColor={sandColor} stopOpacity="0.92"/>
-          </linearGradient>
+          {/* Glass: radial brights inside each bulb to suggest spherical refraction */}
+          <radialGradient id="glass-top-bulb" cx="0.32" cy="0.3" r="0.85">
+            <stop offset="0"    stopColor="#ffffff" stopOpacity="0.32"/>
+            <stop offset="0.45" stopColor="#ffffff" stopOpacity="0.05"/>
+            <stop offset="1"    stopColor="#000000" stopOpacity="0.18"/>
+          </radialGradient>
+          <radialGradient id="glass-bot-bulb" cx="0.32" cy="0.32" r="0.85">
+            <stop offset="0"    stopColor="#ffffff" stopOpacity="0.28"/>
+            <stop offset="0.45" stopColor="#ffffff" stopOpacity="0.04"/>
+            <stop offset="1"    stopColor="#000000" stopOpacity="0.22"/>
+          </radialGradient>
+          {/* Sand: warm-on-top radial cluster for the upper pile (light catches the dip) */}
+          <radialGradient id="sand-grad" cx="0.5" cy="0.15" r="0.95">
+            <stop offset="0"    stopColor={sandHl}/>
+            <stop offset="0.35" stopColor={sandColor}/>
+            <stop offset="1"    stopColor={sandColor} stopOpacity="0.92"/>
+          </radialGradient>
+          {/* Sand bottom mound: glow at the peak, deeper near the floor */}
+          <radialGradient id="sand-grad-bot" cx="0.5" cy="0.2" r="0.9">
+            <stop offset="0"    stopColor={sandHl}/>
+            <stop offset="0.3"  stopColor={sandColor}/>
+            <stop offset="1"    stopColor="#000" stopOpacity="0.35"/>
+          </radialGradient>
           {/* Grain texture — tiny stippled dots overlaid on sand fills so the
               piles read as granular rather than as solid blocks. */}
           <pattern id="sand-grain" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
@@ -293,71 +345,101 @@ function Hourglass({ passedRatio, sandDensity, grainSize, speedFactor, demoSpeed
             <circle cx="2.8" cy="4.8" r="0.55" fill="rgba(0,0,0,0.16)"/>
             <circle cx="5.1" cy="0.8" r="0.5" fill="rgba(0,0,0,0.12)"/>
           </pattern>
+          {/* Soft contact shadow that pools under the bottom cap */}
+          <radialGradient id="floor-shadow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0"   stopColor="#000" stopOpacity="0.45"/>
+            <stop offset="1"   stopColor="#000" stopOpacity="0"/>
+          </radialGradient>
           <clipPath id="cavity">
-            <path d={`
-              M ${HG.frameInset} ${HG.glassTop}
-              L ${HG.W/2 - HG.neckHalf} ${HG.neckY}
-              L ${HG.frameInset} ${HG.glassBot}
-              L ${HG.W - HG.frameInset} ${HG.glassBot}
-              L ${HG.W/2 + HG.neckHalf} ${HG.neckY}
-              L ${HG.W - HG.frameInset} ${HG.glassTop}
-              Z
-            `}/>
+            <path d={cavityPath}/>
           </clipPath>
         </defs>
 
-        {/* Inside-cavity content: glass tint, shine, and the static sand piles */}
+        {/* Inside-cavity content: glass refraction tint, radial highlights, sand piles */}
         <g clipPath="url(#cavity)">
-          <rect x="0" y="0" width={HG.W} height={HG.H} fill="rgba(255,240,200,0.04)"/>
-          <rect x={HG.frameInset + 14} y={HG.glassTop} width={HG.W - 2*(HG.frameInset+14)} height={HG.H} fill="url(#glass-shine)"/>
+          {/* base tint */}
+          <rect x="0" y="0" width={HG.W} height={HG.H} fill="rgba(255,240,200,0.05)"/>
+          {/* top-bulb refraction */}
+          <ellipse cx={cx} cy={topBulbY}
+                   rx={HG.W/2 - HG.frameInset}
+                   ry={(HG.neckY - HG.glassTop) * 0.55}
+                   fill="url(#glass-top-bulb)"/>
+          {/* bottom-bulb refraction */}
+          <ellipse cx={cx} cy={botBulbY}
+                   rx={HG.W/2 - HG.frameInset}
+                   ry={(HG.glassBot - HG.neckY) * 0.55}
+                   fill="url(#glass-bot-bulb)"/>
+          {/* sand */}
           {topPath && <path d={topPath} fill="url(#sand-grad)"/>}
           {topPath && <path d={topPath} fill="url(#sand-grain)" style={{mixBlendMode:"multiply",opacity:0.85}}/>}
           {botPath && <path d={botPath} fill="url(#sand-grad-bot)"/>}
           {botPath && <path d={botPath} fill="url(#sand-grain)" style={{mixBlendMode:"multiply",opacity:0.85}}/>}
+
+          {/* Inner-rim shadows along the wall — adds curvature to the glass.
+              Drawn as the cavity outline with a wide soft stroke; clipped so
+              only the inside fringe shows. */}
+          <path d={cavityPath} fill="none"
+                stroke="rgba(0,0,0,0.28)" strokeWidth="14"
+                style={{filter:"blur(4px)"}}/>
+          {/* Specular highlight running down the left side of each bulb */}
+          <path d={cavityPath} fill="none"
+                stroke="rgba(255,255,255,0.18)" strokeWidth="3"
+                strokeDasharray={`${(HG.neckY - HG.glassTop) * 0.6} 99999`}
+                strokeDashoffset={-(HG.neckY - HG.glassTop) * 0.15}
+                style={{filter:"blur(1.5px)"}}/>
         </g>
 
-        {/* Glass outline */}
-        <path
-          d={`
-            M ${HG.frameInset} ${HG.glassTop}
-            L ${HG.W/2 - HG.neckHalf} ${HG.neckY}
-            L ${HG.frameInset} ${HG.glassBot}
-            M ${HG.W - HG.frameInset} ${HG.glassTop}
-            L ${HG.W/2 + HG.neckHalf} ${HG.neckY}
-            L ${HG.W - HG.frameInset} ${HG.glassBot}
-          `}
-          stroke="rgba(40,20,5,0.55)" strokeWidth="1.5" fill="none"
-        />
+        {/* Glass outline — now a curved silhouette */}
+        <path d={cavityPath} stroke="rgba(40,20,5,0.65)" strokeWidth="1.6" fill="none"/>
+        {/* Outer rim highlight to catch the light */}
+        <path d={cavityPath} stroke="rgba(255,255,255,0.12)" strokeWidth="0.8" fill="none"
+              transform={`translate(-1.2, 0)`}/>
 
-        {/* Top cap */}
-        <rect x="0" y={HG.glassTop - HG.capH} width={HG.W} height={HG.capH} fill="url(#wood-grad)" />
-        <rect x="0" y={HG.glassTop - HG.capH} width={HG.W} height="4" fill="rgba(0,0,0,0.3)" />
-        <rect x="0" y={HG.glassTop - 6} width={HG.W} height="6" fill="rgba(0,0,0,0.25)" />
-        <rect x={HG.W/2 - 60} y={HG.glassTop - HG.capH - 14} width="120" height="14" fill="url(#brass-grad)"/>
-        <rect x={HG.W/2 - 80} y={HG.glassTop - HG.capH - 22} width="160" height="8"  fill="url(#wood-grad)"/>
-        <rect x={HG.W/2 - 26} y={HG.glassTop - HG.capH - 38} width="52"  height="16" fill="url(#brass-grad)"/>
-        <rect x={HG.W/2 - 8}  y={HG.glassTop - HG.capH - 52} width="16"  height="14" fill="url(#wood-grad)"/>
+        {/* Top cap — wood disk with elliptical top for cylinder perspective */}
+        <ellipse cx={cx} cy={HG.glassTop - HG.capH} rx={HG.W/2} ry="9" fill="url(#wood-grad)"/>
+        <ellipse cx={cx} cy={HG.glassTop - HG.capH} rx={HG.W/2 - 4} ry="6" fill="rgba(255,255,255,0.12)"/>
+        <rect x="0" y={HG.glassTop - HG.capH} width={HG.W} height={HG.capH} fill="url(#wood-grad)"/>
+        <rect x="0" y={HG.glassTop - HG.capH} width={HG.W} height={HG.capH} fill="url(#wood-shade)"/>
+        <ellipse cx={cx} cy={HG.glassTop} rx={HG.W/2} ry="7" fill="rgba(0,0,0,0.45)"/>
+        <ellipse cx={cx} cy={HG.glassTop} rx={HG.W/2 - 10} ry="4" fill="rgba(0,0,0,0.55)"/>
+        {/* crown */}
+        <rect x={cx - 60} y={HG.glassTop - HG.capH - 14} width="120" height="14" fill="url(#brass-grad)"/>
+        <ellipse cx={cx} cy={HG.glassTop - HG.capH - 14} rx="60" ry="4" fill="url(#brass-grad)"/>
+        <rect x={cx - 80} y={HG.glassTop - HG.capH - 22} width="160" height="8"  fill="url(#wood-grad)"/>
+        <rect x={cx - 26} y={HG.glassTop - HG.capH - 38} width="52"  height="16" fill="url(#brass-grad)"/>
+        <ellipse cx={cx} cy={HG.glassTop - HG.capH - 38} rx="26" ry="3" fill="url(#brass-grad)"/>
+        <rect x={cx - 8}  y={HG.glassTop - HG.capH - 52} width="16"  height="14" fill="url(#wood-grad)"/>
+        <ellipse cx={cx} cy={HG.glassTop - HG.capH - 52} rx="8" ry="2" fill="url(#wood-grad)"/>
 
-        {/* Bottom cap */}
-        <rect x="0" y={HG.glassBot} width={HG.W} height={HG.capH} fill="url(#wood-grad)" />
-        <rect x="0" y={HG.glassBot} width={HG.W} height="4" fill="rgba(255,255,255,0.18)" />
-        <rect x="0" y={HG.glassBot + HG.capH - 4} width={HG.W} height="4" fill="rgba(0,0,0,0.3)" />
-        <rect x={HG.W/2 - 60}  y={HG.glassBot + HG.capH}      width="120" height="14" fill="url(#brass-grad)"/>
-        <rect x={HG.W/2 - 80}  y={HG.glassBot + HG.capH + 14} width="160" height="8"  fill="url(#wood-grad)"/>
-        <rect x={HG.W/2 - 100} y={HG.glassBot + HG.capH + 22} width="200" height="12" fill="url(#wood-grad)"/>
-        <rect x={HG.W/2 - 100} y={HG.glassBot + HG.capH + 32} width="200" height="3"  fill="rgba(0,0,0,0.35)"/>
+        {/* Bottom cap — mirror with elliptical bottom edge */}
+        <ellipse cx={cx} cy={HG.glassBot} rx={HG.W/2} ry="7" fill="rgba(0,0,0,0.35)"/>
+        <rect x="0" y={HG.glassBot} width={HG.W} height={HG.capH} fill="url(#wood-grad)"/>
+        <rect x="0" y={HG.glassBot} width={HG.W} height={HG.capH} fill="url(#wood-shade)"/>
+        <ellipse cx={cx} cy={HG.glassBot + HG.capH} rx={HG.W/2} ry="9" fill="url(#wood-grad)"/>
+        <ellipse cx={cx} cy={HG.glassBot + HG.capH} rx={HG.W/2 - 6} ry="5" fill="rgba(0,0,0,0.25)"/>
+        <rect x={cx - 60}  y={HG.glassBot + HG.capH}      width="120" height="14" fill="url(#brass-grad)"/>
+        <rect x={cx - 80}  y={HG.glassBot + HG.capH + 14} width="160" height="8"  fill="url(#wood-grad)"/>
+        <rect x={cx - 100} y={HG.glassBot + HG.capH + 22} width="200" height="12" fill="url(#wood-grad)"/>
+        <ellipse cx={cx} cy={HG.glassBot + HG.capH + 34} rx="100" ry="6" fill="url(#wood-grad)"/>
+        <ellipse cx={cx} cy={HG.glassBot + HG.capH + 34} rx="100" ry="6" fill="rgba(0,0,0,0.35)" opacity="0.5"/>
+
+        {/* Floor shadow */}
+        <ellipse cx={cx} cy={HG.glassBot + HG.capH + 44} rx="160" ry="14" fill="url(#floor-shadow)"/>
 
         {/* Side rods */}
         {[[22, HG.glassTop - HG.capH], [HG.W - 22 - HG.rodW, HG.glassTop - HG.capH]].map(([x, y], i) => (
           <g key={i}>
             <rect x={x} y={y} width={HG.rodW} height={HG.glassBot - HG.glassTop + 2*HG.capH} fill="url(#brass-grad)"/>
+            <rect x={x + HG.rodW * 0.35} y={y} width="1.2" height={HG.glassBot - HG.glassTop + 2*HG.capH} fill="rgba(255,255,255,0.4)"/>
             <rect x={x - 2} y={HG.glassTop - HG.capH + 8} width={HG.rodW + 4} height="6" fill={brassColor}/>
             <rect x={x - 2} y={HG.glassBot + HG.capH - 14} width={HG.rodW + 4} height="6" fill={brassColor}/>
           </g>
         ))}
 
-        {/* Neck collar */}
-        <rect x={HG.W/2 - HG.neckHalf - 14} y={HG.neckY - 5} width={(HG.neckHalf + 14) * 2} height="10" fill="url(#brass-grad)"/>
+        {/* Neck collar with cylindrical sheen */}
+        <rect x={cx - HG.neckHalf - 14} y={HG.neckY - 5} width={(HG.neckHalf + 14) * 2} height="10" fill="url(#brass-grad)"/>
+        <rect x={cx - HG.neckHalf - 14} y={HG.neckY - 5} width={(HG.neckHalf + 14) * 2} height="1.5" fill="rgba(255,255,255,0.4)"/>
+        <rect x={cx - HG.neckHalf - 14} y={HG.neckY + 3.5} width={(HG.neckHalf + 14) * 2} height="1.5" fill="rgba(0,0,0,0.4)"/>
       </svg>
 
       <canvas ref={accumRef} className="sand" style={{ display: "none" }} />

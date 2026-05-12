@@ -225,6 +225,24 @@
     letter-spacing: .1em;
   }
   .num-input:focus-within { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  /* Date input variant — smaller text & uses system date picker. */
+  .num-input.date-input { padding: 10px 10px; }
+  .num-input.date-input input[type="date"] {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    color: var(--ink);
+    width: 100%;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    padding: 0;
+  }
+  .num-input.date-input input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: sepia(0.4) saturate(0.8) hue-rotate(-10deg);
+    cursor: pointer;
+  }
 
   .seg {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -325,6 +343,28 @@
     margin-top: 30px;
     max-width: 620px;
   }
+  /* When the quote sits ABOVE the hourglass (modifier from app.jsx),
+     pull it up flush with the side panels and breathe between it and
+     the glass. */
+  .quote-block.quote-top {
+    margin-top: 0;
+    margin-bottom: 22px;
+    padding: 0 12px 14px;
+    border-bottom: 1px solid var(--ink-soft);
+    position: relative;
+  }
+  .quote-block.quote-top::before,
+  .quote-block.quote-top::after {
+    content: "❦";
+    position: absolute;
+    bottom: -10px;
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 0 8px;
+  }
+  .quote-block.quote-top::before { left: 50%; transform: translateX(-50%); }
+  .quote-block.quote-top::after  { display: none; }
   .quote-zh {
     font-family: "Noto Serif TC", serif;
     font-weight: 500;

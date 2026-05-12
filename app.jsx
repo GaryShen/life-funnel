@@ -112,6 +112,54 @@ function NumField({ labelZh, labelEn, value, unit, min, max, onChange }) {
   );
 }
 
+function DateField({ labelZh, labelEn, value, onChange, max }) {
+  return (
+    <div className="field">
+      <div className="field-label">
+        <span className="zh">{labelZh}</span>
+        <span className="en">{labelEn}</span>
+      </div>
+      <div className="num-input date-input">
+        <input
+          type="date"
+          value={value}
+          max={max}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+}
+
+// today's date as YYYY-MM-DD (local time)
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// default birthday: today minus 28 years
+function defaultBirthday() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 28);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// age in years (fractional) from YYYY-MM-DD birthday
+function ageFromBirthday(bday) {
+  if (!bday) return 0;
+  const b = new Date(bday + "T00:00:00");
+  if (Number.isNaN(b.getTime())) return 0;
+  const diffMs = Date.now() - b.getTime();
+  if (diffMs <= 0) return 0;
+  return diffMs / (365.25 * 24 * 3600 * 1000);
+}
+
 function GenderSeg({ value, onChange }) {
   const opts = [
     { id: "male",    zh: "男", en: "Male" },
@@ -154,7 +202,7 @@ function Stat({ kZh, kEn, v, unitZh, unitEn }) {
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [age, setAge] = React.useState(28);
+  const [birthday, setBirthday] = React.useState(defaultBirthday);
   const [gender, setGender] = React.useState("neutral");
   const [target, setTarget] = React.useState(82);
   const [quoteIdx, setQuoteIdx] = React.useState(0);
@@ -170,8 +218,8 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
-  // numbers
-  const ageNum = Math.max(0, Math.min(120, +age || 0));
+  // numbers — age is derived from birthday (fractional, in years)
+  const ageNum = Math.max(0, Math.min(120, ageFromBirthday(birthday)));
   const targetNum = Math.max(ageNum + 0.1, Math.min(120, +target || 80));
   const passed = ageNum / targetNum;
   const remainingYears = Math.max(0, targetNum - ageNum);
@@ -183,6 +231,7 @@ function App() {
   // current date stamp
   const now = new Date();
   const dStamp = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
+  const birthYear = birthday ? parseInt(birthday.slice(0, 4), 10) : now.getFullYear() - 28;
 
   // theme colors for hourglass
   const theme = THEMES[t.theme] || THEMES.sepia;
@@ -201,7 +250,7 @@ function App() {
       {/* Masthead */}
       <header className="masthead">
         <div className="mast-l">
-          Volume <b className="num">{(now.getFullYear() - ageNum)}</b><br/>
+          Volume <b className="num">{birthYear}</b><br/>
           Issued upon a finite life
         </div>
         <div className="mast-c">
@@ -224,9 +273,15 @@ function App() {
           <section className="panel">
             <h2 className="panel-title">您的座標 <span className="en">Your Coordinates</span></h2>
             <hr className="panel-rule" />
-            <NumField labelZh="目前歲數" labelEn="Current age"
-              value={age} unit="歲 / yrs" min={0} max={120}
-              onChange={setAge}/>
+            <DateField labelZh="出生年月日" labelEn="Date of birth"
+              value={birthday} max={todayISO()}
+              onChange={setBirthday}/>
+            <div style={{fontSize:11, color:"var(--ink-soft)", letterSpacing:".06em", lineHeight:1.5, margin:"-10px 0 14px"}}>
+              <span className="zh">目前 </span>
+              <b className="num" style={{color:"var(--ink)"}}>{fmt(ageNum, 2)}</b>
+              <span className="zh"> 歲 · </span>
+              <span className="eng">{fmt(ageNum, 2)} years old</span>
+            </div>
             <GenderSeg value={gender} onChange={(g) => {
               setGender(g);
               // gentle nudge target value based on rough averages
@@ -249,7 +304,7 @@ function App() {
             <h2 className="panel-title">本日結算 <span className="en">Today's Tally</span></h2>
             <hr className="panel-rule dashed" />
             <Stat kZh="已過歲月" kEn="Years lived"
-              v={fmt(ageNum, 0)} unitZh="年" />
+              v={fmt(ageNum, 2)} unitZh="年" />
             <Stat kZh="剩餘歲月" kEn="Years left"
               v={fmt(remainingYears, 1)} unitZh="年" />
             <Stat kZh="已過比例" kEn="Spent"
@@ -257,8 +312,16 @@ function App() {
           </section>
         </aside>
 
-        {/* CENTER — hourglass + quote */}
+        {/* CENTER — quote + hourglass (quote sits above the glass) */}
         <main className="hourglass-col">
+          {t.showQuotes && (
+            <div className="quote-block quote-top">
+              <p className="quote-zh">「{quote.zh}」</p>
+              <p className="quote-en">"{quote.en}"</p>
+              <div className="quote-attr">— {quote.attr} —</div>
+            </div>
+          )}
+
           <Hourglass
             passedRatio={passed}
             sandDensity={t.density}
@@ -275,14 +338,6 @@ function App() {
             <span>已 <b className="num">{fmt(pctPassed, 1)}%</b></span>
             <span><b>下：流逝</b> · Bottom: spent</span>
           </div>
-
-          {t.showQuotes && (
-            <div className="quote-block">
-              <p className="quote-zh">「{quote.zh}」</p>
-              <p className="quote-en">"{quote.en}"</p>
-              <div className="quote-attr">— {quote.attr} —</div>
-            </div>
-          )}
         </main>
 
         {/* RIGHT — stats */}
