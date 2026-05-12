@@ -244,6 +244,133 @@
     cursor: pointer;
   }
 
+  /* Reminders — fill-in-the-blank prose list. Inputs blend into the page
+     until hover/focus, keeping the vintage feel; ✕ stays invisible until
+     hovering the row so the panel reads clean. */
+  .reminder-list { display: flex; flex-direction: column; }
+  .reminder-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 8px;
+    padding: 10px 0;
+    border-bottom: 1px dashed rgba(60,40,20,.18);
+    align-items: baseline;
+  }
+  .reminder-row:last-of-type { border-bottom: 0; }
+  .reminder-row input,
+  .reminder-row select {
+    appearance: none;
+    -moz-appearance: textfield;
+    border: 0; outline: 0; background: transparent;
+    color: var(--ink);
+    font: inherit;
+    padding: 2px 2px;
+    border-bottom: 1px dotted transparent;
+    min-width: 0;
+    transition: border-color .12s ease;
+  }
+  .reminder-row input:hover,
+  .reminder-row select:hover { border-bottom-color: var(--ink-soft); }
+  .reminder-row input:focus,
+  .reminder-row select:focus { border-bottom-color: var(--accent); }
+  .reminder-row input::-webkit-outer-spin-button,
+  .reminder-row input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .reminder-label {
+    grid-column: 1;
+    font-family: "Noto Serif TC", serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: .04em;
+    width: 100%;
+  }
+  .reminder-delete {
+    grid-column: 2; grid-row: 1;
+    appearance: none; border: 0; background: transparent;
+    color: rgba(60,40,20,.3);
+    cursor: pointer; padding: 0 2px;
+    font-size: 12px; line-height: 1;
+    opacity: 0;
+    transition: opacity .12s ease, color .12s ease;
+  }
+  .reminder-row:hover .reminder-delete,
+  .reminder-row:focus-within .reminder-delete { opacity: 1; }
+  .reminder-delete:hover { color: var(--accent); }
+
+  .reminder-meta {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: .02em;
+  }
+  .reminder-period {
+    font-family: "Noto Serif TC", serif;
+    color: var(--ink-soft);
+    padding-right: 14px;
+    cursor: pointer;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+      linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: right 3px top 50%, right 0 top 50%;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+  }
+  .reminder-amount {
+    width: 3em;
+    text-align: center;
+    font-family: "Cormorant Garamond", serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .reminder-unit {
+    width: 2.2em;
+    text-align: center;
+    font-family: "Noto Serif TC", serif;
+    color: var(--ink-soft);
+  }
+  .reminder-result {
+    margin-left: auto;
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .reminder-result .num {
+    font-style: normal; font-weight: 600;
+    color: var(--ink);
+    margin: 0 2px;
+  }
+  .reminder-empty {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 14px 0;
+    margin: 0;
+  }
+  .reminder-add {
+    appearance: none;
+    border: 1px dashed var(--ink-soft);
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: "Noto Serif TC", serif;
+    font-size: 12px;
+    letter-spacing: .1em;
+    padding: 8px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, border-style .15s ease;
+  }
+  .reminder-add:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+    border-style: solid;
+  }
+
   .seg {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
     border: 1px solid var(--ink-soft);

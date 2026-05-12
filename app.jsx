@@ -8,6 +8,18 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showQuotes": true
 }/*EDITMODE-END*/;
 
+// Seed list shown the first time. The user can add/edit/remove freely
+// afterward — the active list lives in localStorage under 'lf.reminders'.
+const REMINDER_DEFAULTS = [
+  { id: "r-travel",  label: "出國旅行", amount: 2,  period: "year", unit: "次" },
+  { id: "r-parents", label: "見父母",   amount: 4,  period: "year", unit: "次" },
+  { id: "r-books",   label: "看書",     amount: 30, period: "day",  unit: "頁" },
+];
+
+// year=1, month=12, day=365.25 — used as `amount × mult × remainingYears`
+// so all items normalize to "remaining count over your remaining lifetime".
+const PERIOD_MULT = { year: 1, month: 12, day: 365.25 };
+
 const THEMES = {
   sepia: {
     label: "Sepia 沙黃",
@@ -200,12 +212,95 @@ function Stat({ kZh, kEn, v, unitZh, unitEn }) {
   );
 }
 
+// Custom localStorage-backed list. Unlike useTweaks (which round-trips through
+// a host window's postMessage), this hook is standalone-safe.
+function useReminders() {
+  const [items, setItems] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem("lf.reminders");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
+    return REMINDER_DEFAULTS;
+  });
+  React.useEffect(() => {
+    try { localStorage.setItem("lf.reminders", JSON.stringify(items)); } catch (_) {}
+  }, [items]);
+
+  const add = React.useCallback(() => {
+    setItems((prev) => [...prev, {
+      id: "r-" + Date.now().toString(36),
+      label: "新項目", amount: 1, period: "year", unit: "次",
+    }]);
+  }, []);
+  const update = React.useCallback((id, patch) => {
+    setItems((prev) => prev.map((it) => it.id === id ? { ...it, ...patch } : it));
+  }, []);
+  const remove = React.useCallback((id) => {
+    setItems((prev) => prev.filter((it) => it.id !== id));
+  }, []);
+
+  return { items, add, update, remove };
+}
+
+function reminderTotal(item, remainingYears) {
+  const mult = PERIOD_MULT[item.period] ?? 1;
+  const amt  = Number.isFinite(+item.amount) ? +item.amount : 0;
+  return Math.max(0, Math.round(amt * mult * remainingYears));
+}
+
+function ReminderRow({ item, total, onChange, onRemove }) {
+  return (
+    <div className="reminder-row">
+      <input
+        className="reminder-label"
+        value={item.label}
+        placeholder="標籤"
+        onChange={(e) => onChange({ label: e.target.value })}
+      />
+      <button className="reminder-delete" onClick={onRemove}
+        aria-label="刪除此項目" title="刪除">✕</button>
+      <div className="reminder-meta">
+        <select className="reminder-period"
+          value={item.period}
+          onChange={(e) => onChange({ period: e.target.value })}>
+          <option value="year">每年</option>
+          <option value="month">每月</option>
+          <option value="day">每天</option>
+        </select>
+        <input className="reminder-amount"
+          type="number" inputMode="numeric" min={0}
+          value={item.amount}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "") return onChange({ amount: 0 });
+            const n = parseFloat(v);
+            if (!Number.isNaN(n)) onChange({ amount: Math.max(0, n) });
+          }}
+        />
+        <input className="reminder-unit"
+          value={item.unit}
+          placeholder="次"
+          maxLength={2}
+          onChange={(e) => onChange({ unit: e.target.value })}
+        />
+        <div className="reminder-result">
+          約剩 <b className="num">{fmt(total)}</b> {item.unit}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [birthday, setBirthday] = React.useState(defaultBirthday);
   const [gender, setGender] = React.useState("neutral");
   const [target, setTarget] = React.useState(82);
   const [quoteIdx, setQuoteIdx] = React.useState(0);
+  const reminders = useReminders();
 
   // theme reactive
   React.useEffect(() => { applyTheme(t.theme); }, [t.theme]);
@@ -367,16 +462,22 @@ function App() {
           <section className="panel">
             <h2 className="panel-title">提醒 <span className="en">Reminders</span></h2>
             <hr className="panel-rule dashed" />
-            <div style={{fontSize:13, lineHeight:1.65, color:"var(--ink)"}}>
-              <p className="zh" style={{margin:"0 0 8px"}}>
-                · 若父母 60 歲，每年見 2 次，約剩 <b className="num">{Math.max(0, (85 - 60) * 2)}</b> 次面。
-              </p>
-              <p className="zh" style={{margin:"0 0 8px"}}>
-                · 你每天還能讀約 <b className="num">{fmt(Math.round(remainingDays * 0.5))}</b> 頁書。
-              </p>
-              <p className="zh" style={{margin:0}}>
-                · 與所愛之人共度的清晨，僅約 <b className="num">{fmt(remainingDays)}</b> 個。
-              </p>
+            <div className="reminder-list">
+              {reminders.items.map((item) => (
+                <ReminderRow
+                  key={item.id}
+                  item={item}
+                  total={reminderTotal(item, remainingYears)}
+                  onChange={(patch) => reminders.update(item.id, patch)}
+                  onRemove={() => reminders.remove(item.id)}
+                />
+              ))}
+              {reminders.items.length === 0 && (
+                <p className="reminder-empty zh">尚未設定任何項目</p>
+              )}
+              <button className="reminder-add" onClick={reminders.add}>
+                + 新增項目
+              </button>
             </div>
           </section>
         </aside>
