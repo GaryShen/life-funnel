@@ -479,6 +479,11 @@
     padding: 0 12px 14px;
     border-bottom: 1px solid var(--ink-soft);
     position: relative;
+    /* Reserve room for longest quote so 9s rotation doesn't reflow the hourglass below. */
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
   .quote-block.quote-top::before,
   .quote-block.quote-top::after {
