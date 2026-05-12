@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#ece2cf"/>
+  <!-- top sand (light, more) -->
+  <path d="M9 6 L23 6 L17.5 14 Q16 14.8 14.5 14 Z" fill="#c8893e"/>
+  <!-- bottom sand mound -->
+  <path d="M9 26 L23 26 L20 21 Q16 17 12 21 Z" fill="#c8893e"/>
+  <!-- glass outline -->
+  <path d="M9 6 L14.5 15 L9 24 M23 6 L17.5 15 L23 24" fill="none" stroke="#2b1d10" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- caps -->
+  <rect x="7" y="4.5" width="18" height="2" fill="#3e2716"/>
+  <rect x="7" y="25.5" width="18" height="2" fill="#3e2716"/>
+  <!-- falling grain -->
+  <circle cx="16" cy="17" r=".7" fill="#f5cd7e"/>
+  <circle cx="16" cy="19.5" r=".55" fill="#c8893e"/>
+</svg>

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="paper" cx="50%" cy="40%" r="80%">
+      <stop offset="0%" stop-color="#f1e7d2"/>
+      <stop offset="70%" stop-color="#ece2cf"/>
+      <stop offset="100%" stop-color="#d6c4a5"/>
+    </radialGradient>
+    <linearGradient id="sand-grad" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f5cd7e"/>
+      <stop offset="0.18" stop-color="#c8893e"/>
+      <stop offset="1" stop-color="#c8893e"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#b48946"/>
+      <stop offset="0.5" stop-color="#e3b873"/>
+      <stop offset="1" stop-color="#b48946"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#3e2716"/>
+      <stop offset="0.5" stop-color="#5e3a20"/>
+      <stop offset="1" stop-color="#3e2716"/>
+    </linearGradient>
+  </defs>
+
+  <!-- paper -->
+  <rect width="1200" height="630" fill="url(#paper)"/>
+
+  <!-- double border frame -->
+  <rect x="24" y="24" width="1152" height="582" fill="none" stroke="#2b1d10" stroke-width="2"/>
+  <rect x="34" y="34" width="1132" height="562" fill="none" stroke="#5a4630" stroke-width="0.6"/>
+
+  <!-- masthead rule -->
+  <line x1="60" y1="88" x2="1140" y2="88" stroke="#2b1d10" stroke-width="1.5"/>
+  <line x1="60" y1="95" x2="1140" y2="95" stroke="#5a4630" stroke-width="0.6"/>
+
+  <!-- top mini-text -->
+  <text x="68" y="74" font-family="Cormorant Garamond, Georgia, serif" font-size="14" letter-spacing="2.4" fill="#5a4630">VOL. MMXXVI · ISSUED UPON A FINITE LIFE</text>
+  <text x="1132" y="74" text-anchor="end" font-family="Cormorant Garamond, Georgia, serif" font-size="14" letter-spacing="2.4" fill="#5a4630">A DAILY RECKONING</text>
+
+  <!-- Hourglass (left side) -->
+  <g transform="translate(180, 160)">
+    <!-- top wood cap -->
+    <rect x="-20" y="-22" width="280" height="22" fill="url(#wood)"/>
+    <rect x="-40" y="-32" width="320" height="10" fill="url(#brass)"/>
+    <!-- side rods -->
+    <rect x="-12" y="-22" width="6" height="364" fill="url(#brass)"/>
+    <rect x="246" y="-22" width="6" height="364" fill="url(#brass)"/>
+    <!-- glass cavity outline -->
+    <path d="M 8 0 L 120 165 L 8 330 M 232 0 L 120 165 L 232 330"
+          fill="none" stroke="#2b1d10" stroke-width="2" stroke-linejoin="round"/>
+    <!-- top sand (partly filled) -->
+    <path d="M 110 165 L 18 35 L 100 35 Q 120 50 140 35 L 222 35 L 130 165 Z"
+          fill="url(#sand-grad)"/>
+    <!-- bottom sand mound -->
+    <path d="M 8 330 L 30 240 L 80 230 Q 120 200 160 230 L 210 240 L 232 330 Z"
+          fill="url(#sand-grad)"/>
+    <!-- falling grains -->
+    <circle cx="120" cy="175" r="2.5" fill="#f5cd7e"/>
+    <circle cx="119" cy="186" r="2" fill="#c8893e"/>
+    <circle cx="122" cy="198" r="2.2" fill="#f5cd7e"/>
+    <circle cx="118" cy="210" r="1.8" fill="#c8893e"/>
+    <circle cx="121" cy="221" r="2" fill="#c8893e"/>
+    <!-- neck collar -->
+    <rect x="100" y="160" width="40" height="10" fill="url(#brass)"/>
+    <!-- bottom wood cap -->
+    <rect x="-20" y="330" width="280" height="22" fill="url(#wood)"/>
+    <rect x="-40" y="352" width="320" height="10" fill="url(#brass)"/>
+  </g>
+
+  <!-- Right column text -->
+  <g transform="translate(490, 260)">
+    <!-- Chinese title -->
+    <text x="0" y="0" font-family="Noto Serif TC, PingFang TC, Hiragino Sans GB, serif" font-weight="900" font-size="118" letter-spacing="6" fill="#2b1d10">人 生 漏 斗</text>
+    <!-- English title -->
+    <text x="0" y="62" font-family="Cormorant Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="42" fill="#5a4630" letter-spacing="3">— The Life Funnel —</text>
+    <!-- Ornament -->
+    <g transform="translate(0, 110)">
+      <line x1="0" y1="6" x2="70" y2="6" stroke="#5a4630" stroke-width="1"/>
+      <text x="90" y="12" font-family="Cormorant Garamond, Georgia, serif" font-size="18" letter-spacing="8" fill="#5a4630">MEMENTO  MORI</text>
+      <line x1="340" y1="6" x2="410" y2="6" stroke="#5a4630" stroke-width="1"/>
+    </g>
+    <!-- subtitle -->
+    <text x="0" y="170" font-family="Noto Serif TC, PingFang TC, serif" font-weight="500" font-size="26" fill="#2b1d10">看餘下的時光如沙流逝</text>
+    <text x="0" y="208" font-family="Cormorant Garamond, Georgia, serif" font-style="italic" font-size="22" fill="#5a4630">Watch what remains, falling.</text>
+  </g>
+
+  <!-- bottom rule -->
+  <line x1="60" y1="555" x2="1140" y2="555" stroke="#5a4630" stroke-width="0.6"/>
+  <text x="68" y="582" font-family="Cormorant Garamond, Georgia, serif" font-size="13" letter-spacing="3" fill="#5a4630">PRINTED IN THIS VERY MOMENT</text>
+  <text x="1132" y="582" text-anchor="end" font-family="Cormorant Garamond, Georgia, serif" font-size="13" letter-spacing="3" fill="#5a4630">NO. ∞ / 10,000</text>
+
+  <!-- red stamp -->
+  <g transform="translate(1020, 480) rotate(-8)">
+    <rect x="0" y="0" width="120" height="46" fill="none" stroke="#9c2a1d" stroke-width="2.5"/>
+    <text x="60" y="20" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="11" letter-spacing="3" fill="#9c2a1d">EDITION</text>
+    <text x="60" y="38" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-weight="700" font-size="16" letter-spacing="2" fill="#9c2a1d">MMXXVI</text>
+  </g>
+</svg>
