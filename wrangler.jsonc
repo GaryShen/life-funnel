@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "life-hourglass",
+  "name": "life-funnel",
   "compatibility_date": "2026-05-12",
   "observability": {
     "enabled": true
