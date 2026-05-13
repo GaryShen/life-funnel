@@ -1,17 +1,17 @@
-# 人生漏斗 · The Life Funnel
+# 人生沙漏 · The Life Hourglass
 
 > 看餘下的時光如沙流逝。
 > _Watch what remains, falling._
 
 A vintage hourglass life-countdown — a quiet, daily reckoning of how much of your finite life remains, rendered as sand draining from an aged sand-glass.
 
-![The Life Funnel](og-image.png)
+![The Life Hourglass](og-image.png)
 
 ---
 
 ## 這是什麼？ / What is this?
 
-輸入你目前的歲數、性別、與目標壽命，頁面會在中央漏斗中讓沙緩緩自上流下，左右兩側計算剩餘的天數、小時、週末次數，並輪換中英雙語的反思箴言（Seneca、Marcus Aurelius、Annie Dillard …）。
+輸入你目前的歲數、性別、與目標壽命，頁面會在中央沙漏中讓沙緩緩自上流下，左右兩側計算剩餘的天數、小時、週末次數，並輪換中英雙語的反思箴言（Seneca、Marcus Aurelius、Annie Dillard …）。
 
 Enter your current age, gender, and target lifespan. The hourglass at the center drains in real time; the side panels compute days, hours, and weekends remaining. Bilingual reflective quotes from Seneca, Marcus Aurelius, Annie Dillard, and others rotate every nine seconds.
 
@@ -80,7 +80,7 @@ npx serve .
 ## 檔案結構 / Project structure
 
 ```
-life-funnel/
+life-hourglass/
 ├── index.html          # HTML shell, all CSS inline, meta tags, font loading
 ├── app.jsx             # Main React component (form, layout, state)
 ├── hourglass.jsx       # SVG silhouette + sand piles + canvas particles

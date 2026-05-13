@@ -1,4 +1,4 @@
-// Main app — bilingual vintage Life Funnel.
+// Main app — bilingual vintage Life Hourglass.
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "theme": "sepia",
@@ -349,8 +349,8 @@ function App() {
           Issued upon a finite life
         </div>
         <div className="mast-c">
-          <h1 className="title-zh">人 生 漏 斗</h1>
-          <div className="title-en">— The Life Funnel —</div>
+          <h1 className="title-zh">人 生 沙 漏</h1>
+          <div className="title-en">— The Life Hourglass —</div>
           <div className="ornament">
             <hr/> Memento Mori <hr/>
           </div>

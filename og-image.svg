@@ -70,9 +70,9 @@
   <!-- Right column text -->
   <g transform="translate(490, 260)">
     <!-- Chinese title -->
-    <text x="0" y="0" font-family="Noto Serif TC, PingFang TC, Hiragino Sans GB, serif" font-weight="900" font-size="118" letter-spacing="6" fill="#2b1d10">人 生 漏 斗</text>
+    <text x="0" y="0" font-family="Noto Serif TC, PingFang TC, Hiragino Sans GB, serif" font-weight="900" font-size="118" letter-spacing="6" fill="#2b1d10">人 生 沙 漏</text>
     <!-- English title -->
-    <text x="0" y="62" font-family="Cormorant Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="42" fill="#5a4630" letter-spacing="3">— The Life Funnel —</text>
+    <text x="0" y="62" font-family="Cormorant Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="42" fill="#5a4630" letter-spacing="3">— The Life Hourglass —</text>
     <!-- Ornament -->
     <g transform="translate(0, 110)">
       <line x1="0" y1="6" x2="70" y2="6" stroke="#5a4630" stroke-width="1"/>
